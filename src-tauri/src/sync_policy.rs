@@ -1,5 +1,26 @@
 use crate::app_config::AppType;
 
+/// Whether CC-Switch runs in headless (live-isolated) mode.
+///
+/// Enabled when the `CC_SWITCH_HEADLESS` environment variable is set to a
+/// truthy value (`1`, `true`, `yes`, `on`; case-insensitive). In headless mode
+/// CC-Switch never writes any app's *live* configuration files (for example
+/// `~/.claude/settings.json`). The local proxy still serves and routes via the
+/// in-database `current_provider`, so a caller — such as a custom launcher that
+/// points Claude at the proxy via `ANTHROPIC_BASE_URL` — drives the app purely
+/// through environment variables, with zero touches to live config.
+pub(crate) fn headless_mode() -> bool {
+    std::env::var_os("CC_SWITCH_HEADLESS")
+        .as_deref()
+        .map(is_truthy_env)
+        .unwrap_or(false)
+}
+
+fn is_truthy_env(value: &std::ffi::OsStr) -> bool {
+    let value = value.to_ascii_lowercase();
+    !(value.is_empty() || value == "0" || value == "false" || value == "no" || value == "off")
+}
+
 /// Whether we should write/delete "live" config files for a given app.
 ///
 /// Policy: **auto** (safe default)

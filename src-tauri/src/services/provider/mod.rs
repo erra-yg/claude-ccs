@@ -2955,6 +2955,12 @@ impl ProviderService {
     }
 
     fn apply_prepared_live_snapshot(prepared: &PreparedLiveWrite) -> Result<(), AppError> {
+        // Headless mode: never write any app's live config. The DB
+        // `current_provider` still updates, so the proxy keeps routing correctly
+        // without touching files such as `~/.claude/settings.json`.
+        if crate::sync_policy::headless_mode() {
+            return Ok(());
+        }
         match prepared {
             PreparedLiveWrite::Noop => Ok(()),
             PreparedLiveWrite::Claude { .. } => Self::apply_claude_live_write(prepared),
