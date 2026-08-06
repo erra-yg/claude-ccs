@@ -60,13 +60,14 @@ MODEL_ARG=()
   --base-url "$BASE_URL" --api-key "$KEY" --api-key-field api-key \
   --api-format openai_chat "${MODEL_ARG[@]}" >/dev/null
 
-# Upstream stores api_format as camelCase "apiFormat" but the running proxy reads
-# snake_case "api_format"; mirror the value so translation engages. (A/B proven.)
-sqlite3 "$DB" "UPDATE providers SET meta = json_set(meta, '\$.api_format', json_extract(meta, '\$.apiFormat')) WHERE id = '$NAME' AND app_type='claude';" \
-  || echo "warn: could not normalize meta (sqlite3 missing?); translation may not engage — see headless/README.md" >&2
-
 "$CCS_BIN" provider switch "$NAME" >/dev/null
 "$CCS_BIN" failover add "$NAME" >/dev/null || echo "note: failover add skipped (already queued?)" >&2
+
+# Normalize meta LAST (provider switch re-serializes meta and would undo this).
+# The proxy translates only when meta has snake_case `api_format` and NOT camelCase
+# `apiFormat` (A/B: snake-only -> 200, snake+camel -> 401, camel-only -> 401).
+sqlite3 "$DB" "UPDATE providers SET meta = json_set(json_remove(meta, '\$.apiFormat'), '\$.api_format', 'openai_chat') WHERE id = '$NAME' AND app_type='claude';" \
+  || echo "warn: could not normalize meta (sqlite3 missing?); translation will not engage — see headless/README.md" >&2
 
 echo "provider '$NAME' ready: openai_chat, current, queued for failover."
 echo "  db: $DB"

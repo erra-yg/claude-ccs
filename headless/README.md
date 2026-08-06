@@ -65,9 +65,17 @@ Auto-failover is the **unmodified** upstream feature (circuit breaker + queue). 
 
 ## Known issue: `apiFormat` camel/snake mismatch (upstream)
 
-`cc-switch provider add --api-format openai_chat` stores the format as **camelCase `apiFormat`** in the provider `meta`, but the running proxy reads **snake_case `api_format`**. The net effect: a provider added only via the flag is treated as Anthropic-native by the proxy and translation silently does not engage (HTTP 401 "Missing API key" from the upstream). Confirmed by A/B test: `meta.api_format` → 200 (translates), `meta.apiFormat` → 401.
+`cc-switch provider add --api-format openai_chat` stores the format as **camelCase `apiFormat`** in the provider `meta`, but the running proxy translates only when meta has **snake_case `api_format` AND NOT camelCase `apiFormat`**. A/B on one running proxy:
 
-`ccs-setup-provider.sh` works around this with a one-line `sqlite3 json_set` that mirrors the value into the snake key. It is ugly but proven; fixing it properly means changing `ProviderMeta.api_format` serde (rename→alias), which ripples through 40+ test assertions and TUI code that assume camel — out of scope for this minimal patch.
+| meta state | result |
+|---|---|
+| camelCase `apiFormat` only | 401 (Anthropic-native, no translation) |
+| snake `api_format` + camel `apiFormat` | 401 |
+| **snake `api_format` only** | **200 (translates)** |
+
+Worse, `cc-switch provider switch` **re-serializes `meta`** and drops the snake key (re-emitting camelCase). So the snake key must be written **after** any `provider switch`, every time.
+
+Both helpers handle this: they `add` → `switch` → then a final `sqlite3` step that does `json_set(json_remove(meta,'$.apiFormat'),'$.api_format','openai_chat')` (snake-only), as the last write. `claude-ccs` re-applies it on every invocation (since the leading `provider switch` re-serializes). Fixing it properly means changing `ProviderMeta.api_format` serde + the re-serialize path, which ripples through 40+ test assertions and TUI code — out of scope for this minimal patch.
 
 ## Portability
 
