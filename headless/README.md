@@ -1,0 +1,78 @@
+# cc-switch headless mode
+
+A tiny patch on top of [cc-switch-cli](https://github.com/saladday/cc-switch-cli) (itself a CLI fork of [cc-switch](https://github.com/farion1231/cc-switch)) that adds one environment variable, **`CC_SWITCH_HEADLESS`**, with a single guarantee:
+
+> When `CC_SWITCH_HEADLESS=1`, the process **never writes any file under `~/.claude/`** (nor any other app's live config). The local proxy — Anthropic↔OpenAI translation + failover — still runs and serves Claude Code via environment variables.
+
+This exists for the operator who launches `claude` through per-process env (e.g. a `claude-profiles` shell launcher) and does **not** want a GUI app rewriting `~/.claude/settings.json` out from under them.
+
+## Why
+
+Stock cc-switch (GUI or CLI) "switches" a provider by rewriting `~/.claude/settings.json` — and for Claude it **replaces the whole file** with the provider's `env` block, wiping `theme` / `hooks` / `statusLine` / plugins. That clobbers any coexisting launcher. In headless mode the provider selection is kept in cc-switch's SQLite DB only (the proxy's `ProviderRouter` reads the DB, not live files), so a launcher points Claude at the proxy via `ANTHROPIC_BASE_URL` and the live config is never touched.
+
+## Build
+
+```bash
+cd src-tauri
+cargo build --release      # binary: src-tauri/target/release/cc-switch
+```
+
+Requires Rust 1.91+ (`rust-toolchain.toml` pins it; `rustup` auto-installs).
+
+## Run
+
+Two environment variables drive headless operation:
+
+| var | purpose |
+|---|---|
+| `CC_SWITCH_HEADLESS=1` | disable **all** live-config writes (the patch) |
+| `CC_SWITCH_CONFIG_DIR=<dir>` | relocate cc-switch's own state (`cc-switch.db`, settings, skills) — makes the install portable |
+
+Then:
+
+```bash
+# 1. configure a provider once (OpenAI-compatible; see script below)
+CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless \
+  cc-switch provider add --app claude --template custom \
+    --name opencode-go --id opencode-go \
+    --base-url https://opencode.ai/zen/go --api-key "$KEY" --api-key-field api-key \
+    --model deepseek-v4-flash --api-format openai_chat
+# (see "Known issue: apiFormat" below for the one-line normalize)
+
+# 2. start the proxy (headless, no takeover — it will NOT touch ~/.claude)
+CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless cc-switch proxy serve
+```
+
+Point Claude at the proxy with the launcher you already use. For a `claude-profiles`-style launcher, add a profile whose `base-url` is the proxy and whose `auth-token` is any placeholder (the proxy injects the real upstream key; it accepts any inbound token on localhost):
+
+```
+~/.config/claude-profiles/opencode-go/
+  base-url     -> http://127.0.0.1:15721
+  auth-token   -> dummy
+  model        -> deepseek-v4-flash
+```
+
+Then `claude-opencode-go` (or whatever your function is called) routes through the proxy.
+
+## Helpers
+
+- `ccs-proxy-up.sh` — idempotently start the headless proxy if `127.0.0.1:15721` is not already serving.
+- `ccs-setup-provider.sh` — add an OpenAI-compatible provider with the correct `openai_chat` format + the snake-case normalize, set it current, and queue it for failover.
+
+## Failover
+
+Auto-failover is the **unmodified** upstream feature (circuit breaker + queue). Enabling it (`cc-switch failover enable`) is interactive (it confirms on a TTY), so run it in a real terminal or the TUI — not from a non-interactive script. Headless mode does not alter failover behaviour; it only gates live-config writes.
+
+## Known issue: `apiFormat` camel/snake mismatch (upstream)
+
+`cc-switch provider add --api-format openai_chat` stores the format as **camelCase `apiFormat`** in the provider `meta`, but the running proxy reads **snake_case `api_format`**. The net effect: a provider added only via the flag is treated as Anthropic-native by the proxy and translation silently does not engage (HTTP 401 "Missing API key" from the upstream). Confirmed by A/B test: `meta.api_format` → 200 (translates), `meta.apiFormat` → 401.
+
+`ccs-setup-provider.sh` works around this with a one-line `sqlite3 json_set` that mirrors the value into the snake key. It is ugly but proven; fixing it properly means changing `ProviderMeta.api_format` serde (rename→alias), which ripples through 40+ test assertions and TUI code that assume camel — out of scope for this minimal patch.
+
+## Portability
+
+Everything cc-switch needs lives under `$CC_SWITCH_CONFIG_DIR` (DB + settings + skills). To move machines: install the binary, copy that directory, set the two env vars, `provider add` your keys. The Rust toolchain is the only build prerequisite.
+
+## Credit / license
+
+Upstream is MIT (SaladDay/cc-switch-cli, farion1231/cc-switch). This fork only adds the `CC_SWITCH_HEADLESS` guards in `src/sync_policy.rs`, `src/services/provider/mod.rs`, `src/services/proxy.rs`, `src/database/dao/settings.rs`, and `src/claude_plugin.rs`, plus these `headless/` docs/scripts.

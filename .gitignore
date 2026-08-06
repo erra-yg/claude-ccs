@@ -39,3 +39,9 @@ docs/superpowers/
 .superpowers/
 skills-lock.json
 /skills/
+
+# headless mode: never commit secrets / local cc-switch state
+auth-token
+*.key
+*secret*
+.cc-switch-headless/
