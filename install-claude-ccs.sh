@@ -2,7 +2,7 @@
 # install-claude-ccs.sh — install the `claude-ccs` headless proxy launcher.
 #
 # Run from the repo root after `git clone`. Idempotent; safe to re-run.
-#   git clone <this-repo> && cd <this-repo> && ./install-claude-ccs.sh
+#   git clone https://github.com/erra-yg/claude-ccs && cd claude-ccs && ./install-claude-ccs.sh
 #
 # What it does:
 #   1. ensure a C toolchain (build-essential) and Rust (rustup) are present

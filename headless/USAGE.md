@@ -28,7 +28,7 @@
 ## 3. 安装（新机一键）
 
 ```bash
-git clone <你的仓库地址> ~/claude-wksp/cc-switch-headless
+git clone https://github.com/erra-yg/claude-ccs ~/claude-wksp/cc-switch-headless
 cd ~/claude-wksp/cc-switch-headless
 ./install-claude-ccs.sh
 ```

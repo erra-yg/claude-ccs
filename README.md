@@ -9,7 +9,7 @@ It ships a one-command zsh launcher, **`claude-ccs`**, that routes Claude Code t
 ## Install (new machine: WSL/Linux + Claude Code CLI)
 
 ```bash
-git clone <this-repo-url> && cd cc-switch-headless && ./install-claude-ccs.sh
+git clone https://github.com/erra-yg/claude-ccs && cd claude-ccs && ./install-claude-ccs.sh
 ```
 
 `install-claude-ccs.sh` ensures a C toolchain + Rust, builds cc-switch, wires `claude-ccs` into `~/.zshrc` (with the correct `CCS_BIN` path), and creates `~/.config/ccs-providers/`. First build is ~5–10 min. Then:
