@@ -52,6 +52,9 @@ fn is_managed_config(content: &str) -> bool {
 }
 
 pub fn write_claude_config() -> Result<bool, AppError> {
+    if crate::sync_policy::headless_mode() {
+        return Ok(false);
+    }
     // 增量写入：仅设置 primaryApiKey = "any"，保留其它字段
     let path = claude_config_path()?;
     ensure_claude_dir_exists()?;
@@ -91,6 +94,9 @@ pub fn write_claude_config() -> Result<bool, AppError> {
 }
 
 pub fn clear_claude_config() -> Result<bool, AppError> {
+    if crate::sync_policy::headless_mode() {
+        return Ok(false);
+    }
     let path = claude_config_path()?;
     if !path.exists() {
         return Ok(false);

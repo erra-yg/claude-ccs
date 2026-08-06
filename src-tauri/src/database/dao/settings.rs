@@ -170,6 +170,10 @@ impl Database {
         app_type: &str,
         enabled: bool,
     ) -> Result<(), AppError> {
+        if crate::sync_policy::headless_mode() {
+            // Headless mode: takeover can never be persisted as enabled.
+            return Ok(());
+        }
         let key = format!("proxy_takeover_{app_type}");
         let value = if enabled { "true" } else { "false" };
         self.set_setting(&key, value)

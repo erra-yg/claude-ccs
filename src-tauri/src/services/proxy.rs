@@ -2829,6 +2829,11 @@ impl ProxyService {
         fallback_provider_id: Option<&str>,
         options: EnableTakeoverOptions,
     ) -> Result<(), String> {
+        if crate::sync_policy::headless_mode() {
+            // Headless mode never activates takeover, so live config such as
+            // ~/.claude/settings.json is never rewritten with a proxy URL.
+            return Ok(());
+        }
         self.validate_app_proxy_activation(app_type, fallback_provider_id)
             .await?;
 
@@ -3517,6 +3522,11 @@ impl ProxyService {
     }
 
     fn write_live_config_for_app(&self, app_type: &AppType, config: &Value) -> Result<(), String> {
+        if crate::sync_policy::headless_mode() {
+            // Defense-in-depth: headless mode never writes any app's live config
+            // via the proxy takeover/restore path.
+            return Ok(());
+        }
         match app_type {
             AppType::Claude => self.write_claude_live(config),
             AppType::Codex => self.write_codex_live(config),

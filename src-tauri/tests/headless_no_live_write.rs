@@ -12,7 +12,8 @@ use serde_json::json;
 use std::fs;
 
 use cc_switch_lib::{
-    get_claude_settings_path, AppType, MultiAppConfig, Provider, ProviderService,
+    get_claude_settings_path, set_enable_claude_plugin_integration,
+    sync_claude_plugin_on_provider_switch, AppType, MultiAppConfig, Provider, ProviderService,
 };
 
 #[path = "support.rs"]
@@ -119,5 +120,68 @@ fn headless_switch_leaves_live_claude_settings_untouched() {
         after_bytes,
         original_bytes,
         "headless red-line: ~/.claude/settings.json must not be modified by provider switch"
+    );
+}
+
+#[test]
+fn headless_takeover_flag_cannot_be_enabled() {
+    let _guard = lock_test_mutex();
+    reset_test_fs();
+    let _home = ensure_test_home();
+    let _headless = EnvVarGuard::set("CC_SWITCH_HEADLESS", "1");
+
+    let state = state_from_config(MultiAppConfig::default());
+
+    // Baseline: the takeover flag starts disabled.
+    assert!(
+        !state
+            .db
+            .get_proxy_takeover_enabled("claude")
+            .expect("read takeover flag"),
+        "baseline: takeover flag should be off"
+    );
+
+    // Attempting to enable takeover in headless mode must be a no-op so the
+    // proxy can never inject ANTHROPIC_BASE_URL into ~/.claude/settings.json.
+    state
+        .db
+        .set_proxy_takeover_enabled("claude", true)
+        .expect("set takeover flag call succeeds");
+    assert!(
+        !state
+            .db
+            .get_proxy_takeover_enabled("claude")
+            .expect("read takeover flag after enable"),
+        "headless: takeover flag must never be persisted as enabled"
+    );
+}
+
+#[test]
+fn headless_plugin_sync_does_not_write_claude_config() {
+    let _guard = lock_test_mutex();
+    reset_test_fs();
+    let _home = ensure_test_home();
+    let _headless = EnvVarGuard::set("CC_SWITCH_HEADLESS", "1");
+
+    // Opt into the claude plugin integration; without this guard this path
+    // would write ~/.claude/config.json on every non-official provider switch.
+    set_enable_claude_plugin_integration(true).expect("enable claude plugin integration");
+
+    // Ensure the ~/.claude directory exists so a non-guarded write would succeed
+    // (i.e. make this test capable of going RED).
+    let claude_dir = get_claude_settings_path()
+        .parent()
+        .expect("settings.json has a parent dir")
+        .to_path_buf();
+    fs::create_dir_all(&claude_dir).expect("create ~/.claude");
+
+    let provider = claude_provider("p-x", "x-key", "https://x");
+    sync_claude_plugin_on_provider_switch(&AppType::Claude, &provider)
+        .expect("plugin sync completes");
+
+    let config_json = claude_dir.join("config.json");
+    assert!(
+        !config_json.exists(),
+        "headless: ~/.claude/config.json must not be written by plugin sync"
     );
 }
