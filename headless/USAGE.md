@@ -65,13 +65,15 @@ opencode Go 是 opencode.ai 的低价订阅，OpenAI 兼容端点 `https://openc
 ```bash
 mkdir -p ~/.config/ccs-providers/opencode
 echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url
-echo 'deepseek-v4-flash'          > ~/.config/ccs-providers/opencode/model
+echo 'deepseek-v4-flash[1m]'          > ~/.config/ccs-providers/opencode/model
 # 把你的 opencode API key 存到一个文件（假设 ~/.secrets/opencode-key），然后：
 chmod 600 ~/.secrets/opencode-key
 echo "$HOME/.secrets/opencode-key" > ~/.config/ccs-providers/opencode/keyfile
 ```
 
 注意 `base-url` 是 `https://opencode.ai/zen/go`（**不带** `/v1`）。
+
+> **1M 上下文**：model 末尾的 `[1m]` 让 Claude Code 按 1M 窗口管理会话；代理在发往上游前会**自动剥掉 `[1m]`**，opencode 收到的仍是合法的 `deepseek-v4-flash`。模型若不支持 1M 就别加这个后缀。
 
 ---
 

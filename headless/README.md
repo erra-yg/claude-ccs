@@ -49,7 +49,7 @@ Point Claude at the proxy with the launcher you already use. For a `claude-profi
 ~/.config/claude-profiles/opencode/
   base-url     -> http://127.0.0.1:15721
   auth-token   -> dummy
-  model        -> deepseek-v4-flash
+  model        -> deepseek-v4-flash[1m]   # [1m] tells Claude Code 1M context; proxy strips it upstream
 ```
 
 Then `claude-opencode` (or whatever your function is called) routes through the proxy.
