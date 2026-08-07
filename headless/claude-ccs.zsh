@@ -10,7 +10,7 @@
 #   model       model id                                          (optional)
 #
 # Usage:   claude-ccs <name> [claude args...]
-# Example: claude-ccs opencode-go
+# Example: claude-ccs opencode
 # First run for <name> creates the provider in cc-switch; later runs just switch + launch.
 claude-ccs() {
     emulate -L zsh
@@ -76,8 +76,23 @@ claude-ccs() {
 
     # Launch Claude through the proxy. The proxy injects the real upstream key;
     # it accepts any inbound token on localhost, so a placeholder is fine.
-    _claude_clean_env 2>/dev/null
-    ANTHROPIC_BASE_URL="http://127.0.0.1:15721" \
-    ANTHROPIC_AUTH_TOKEN="ccs-proxy" \
-    command claude "$@"
+    # Run in a subshell so model env vars + _claude_clean_env's unsets never leak
+    # into the interactive shell.
+    (
+        _claude_clean_env 2>/dev/null
+        # Export the proxy's model id so Claude Code recognizes + restores it instead
+        # of falling back to claude-opus-5 ("Session model <id> could not be restored").
+        if [ -n "$model" ]; then
+            export ANTHROPIC_MODEL="$model"
+            export ANTHROPIC_DEFAULT_OPUS_MODEL="$model"
+            export ANTHROPIC_DEFAULT_SONNET_MODEL="$model"
+            export ANTHROPIC_DEFAULT_HAIKU_MODEL="$model"
+        fi
+        # Don't let CC assume a 200k ceiling for an unrecognized model id; let the
+        # upstream API decide context size (silences the "unknown model window" notice).
+        ANTHROPIC_BASE_URL="http://127.0.0.1:15721" \
+        ANTHROPIC_AUTH_TOKEN="ccs-proxy" \
+        CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT=1 \
+        command claude "$@"
+    )
 }

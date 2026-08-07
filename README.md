@@ -24,13 +24,13 @@ source ~/.zshrc        # or open a new terminal
 
 ```bash
 # 1. create a provider profile (example: opencode Go)
-mkdir -p ~/.config/ccs-providers/opencode-go
-echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode-go/base-url   # NO trailing /v1
-echo 'deepseek-v4-flash'          > ~/.config/ccs-providers/opencode-go/model
-echo '/absolute/path/to/keyfile'  > ~/.config/ccs-providers/opencode-go/keyfile    # file holding your API key
+mkdir -p ~/.config/ccs-providers/opencode
+echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url   # NO trailing /v1
+echo 'deepseek-v4-flash'          > ~/.config/ccs-providers/opencode/model
+echo '/absolute/path/to/keyfile'  > ~/.config/ccs-providers/opencode/keyfile    # file holding your API key
 
 # 2. launch Claude Code through the proxy
-claude-ccs opencode-go
+claude-ccs opencode
 ```
 
 `claude-ccs` creates the provider (first run), switches to it, starts the headless proxy on `127.0.0.1:15721`, and launches `claude` pointed at it. The proxy runs detached and never touches `~/.claude`.

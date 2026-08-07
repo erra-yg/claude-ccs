@@ -63,12 +63,12 @@ source ~/.zshrc        # 或开新终端
 opencode Go 是 opencode.ai 的低价订阅，OpenAI 兼容端点 `https://opencode.ai/zen/go/v1`，可用 `deepseek-v4-flash`。
 
 ```bash
-mkdir -p ~/.config/ccs-providers/opencode-go
-echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode-go/base-url
-echo 'deepseek-v4-flash'          > ~/.config/ccs-providers/opencode-go/model
+mkdir -p ~/.config/ccs-providers/opencode
+echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url
+echo 'deepseek-v4-flash'          > ~/.config/ccs-providers/opencode/model
 # 把你的 opencode API key 存到一个文件（假设 ~/.secrets/opencode-key），然后：
 chmod 600 ~/.secrets/opencode-key
-echo "$HOME/.secrets/opencode-key" > ~/.config/ccs-providers/opencode-go/keyfile
+echo "$HOME/.secrets/opencode-key" > ~/.config/ccs-providers/opencode/keyfile
 ```
 
 注意 `base-url` 是 `https://opencode.ai/zen/go`（**不带** `/v1`）。
@@ -78,9 +78,9 @@ echo "$HOME/.secrets/opencode-key" > ~/.config/ccs-providers/opencode-go/keyfile
 ## 6. 日常使用
 
 ```bash
-claude-ccs opencode-go          # 启动 cc，走 opencode Go
+claude-ccs opencode          # 启动 cc，走 opencode Go
 claude-ccs                      # 不带参数 → 列出已有 profile
-claude-ccs opencode-go --print "hi"   # 额外参数原样传给 claude
+claude-ccs opencode --print "hi"   # 额外参数原样传给 claude
 ```
 
 第一次对某个名字运行时：自动建供应商→切到它→起代理→启动 cc。之后每次：切供应商→补全配置→确认代理在→启动 cc。
@@ -94,7 +94,7 @@ claude-ccs opencode-go --print "hi"   # 额外参数原样传给 claude
 ```
 你的终端                cc-switch(本机, headless)              上游
 ─────────              ─────────────────────────              ─────
-claude-ccs opencode-go
+claude-ccs opencode
   └─ ANTHROPIC_BASE_URL ──┐
      =127.0.0.1:15721     ▼
                       ┌──────────────────────┐

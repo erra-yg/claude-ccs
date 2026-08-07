@@ -79,15 +79,15 @@ Done. Next:
        source ~/.zshrc        # or open a new terminal
 
   2. Create a provider profile (example: opencode Go). Put each value in its own file:
-       mkdir -p ~/.config/ccs-providers/opencode-go
-       echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode-go/base-url
-       echo 'deepseek-v4-flash'          > ~/.config/ccs-providers/opencode-go/model
-       echo '/absolute/path/to/keyfile'  > ~/.config/ccs-providers/opencode-go/keyfile
+       mkdir -p ~/.config/ccs-providers/opencode
+       echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url
+       echo 'deepseek-v4-flash'          > ~/.config/ccs-providers/opencode/model
+       echo '/absolute/path/to/keyfile'  > ~/.config/ccs-providers/opencode/keyfile
      # keyfile = a file holding your API key (chmod 600). base-url must NOT end in /v1.
      # Full reference: headless/USAGE.md
 
   3. Launch Claude Code through the proxy:
-       claude-ccs opencode-go
+       claude-ccs opencode
 
 The proxy runs detached (survives terminal close) and NEVER writes ~/.claude.
 Logs: ~/.cc-switch-headless/proxy.log

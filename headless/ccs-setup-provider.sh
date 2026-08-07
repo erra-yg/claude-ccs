@@ -6,7 +6,7 @@
 # The API key is read from a file (never echoed / never stored in the repo).
 #
 # Usage:
-#   ccs-setup-provider.sh --name opencode-go \
+#   ccs-setup-provider.sh --name opencode \
 #                         --base-url https://opencode.ai/zen/go \
 #                         --keyfile ~/.config/claude-profiles/opencode/auth-token \
 #                         --model deepseek-v4-flash

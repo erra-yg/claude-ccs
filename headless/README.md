@@ -34,7 +34,7 @@ Then:
 # 1. configure a provider once (OpenAI-compatible; see script below)
 CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless \
   cc-switch provider add --app claude --template custom \
-    --name opencode-go --id opencode-go \
+    --name opencode --id opencode \
     --base-url https://opencode.ai/zen/go --api-key "$KEY" --api-key-field api-key \
     --model deepseek-v4-flash --api-format openai_chat
 # (see "Known issue: apiFormat" below for the one-line normalize)
@@ -46,13 +46,13 @@ CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless cc-switch proxy 
 Point Claude at the proxy with the launcher you already use. For a `claude-profiles`-style launcher, add a profile whose `base-url` is the proxy and whose `auth-token` is any placeholder (the proxy injects the real upstream key; it accepts any inbound token on localhost):
 
 ```
-~/.config/claude-profiles/opencode-go/
+~/.config/claude-profiles/opencode/
   base-url     -> http://127.0.0.1:15721
   auth-token   -> dummy
   model        -> deepseek-v4-flash
 ```
 
-Then `claude-opencode-go` (or whatever your function is called) routes through the proxy.
+Then `claude-opencode` (or whatever your function is called) routes through the proxy.
 
 ## Helpers
 
