@@ -8,8 +8,8 @@
 # Usage:
 #   ccs-setup-provider.sh --name opencode \
 #                         --base-url https://opencode.ai/zen/go \
-#                         --keyfile ~/.config/claude-profiles/opencode/auth-token \
-#                         --model deepseek-v4-flash
+#                         --keyfile ~/.config/ccs-providers/opencode/auth-token \
+#                         --model deepseek-v4-flash[1m]
 #
 # Env:
 #   CCS_BIN    cc-switch binary (default: cc-switch on PATH)

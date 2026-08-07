@@ -82,8 +82,9 @@ Done. Next:
        mkdir -p ~/.config/ccs-providers/opencode
        echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url
        echo 'deepseek-v4-flash[1m]'          > ~/.config/ccs-providers/opencode/model
-       echo '/absolute/path/to/keyfile'  > ~/.config/ccs-providers/opencode/keyfile
-     # keyfile = a file holding your API key (chmod 600). base-url must NOT end in /v1.
+       echo 'YOUR_API_KEY'            > ~/.config/ccs-providers/opencode/auth-token
+       chmod 600 ~/.config/ccs-providers/opencode/auth-token
+     # auth-token = your API key value (chmod 600). base-url must NOT end in /v1.
      # Full reference: headless/USAGE.md
 
   3. Launch Claude Code through the proxy:

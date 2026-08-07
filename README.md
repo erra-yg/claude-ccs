@@ -27,7 +27,8 @@ source ~/.zshrc        # or open a new terminal
 mkdir -p ~/.config/ccs-providers/opencode
 echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url   # NO trailing /v1
 echo 'deepseek-v4-flash[1m]'          > ~/.config/ccs-providers/opencode/model   # [1m] = 1M context; proxy strips the suffix before upstream
-echo '/absolute/path/to/keyfile'  > ~/.config/ccs-providers/opencode/keyfile    # file holding your API key
+echo 'YOUR_API_KEY'            > ~/.config/ccs-providers/opencode/auth-token # the API key value itself
+chmod 600 ~/.config/ccs-providers/opencode/auth-token
 
 # 2. launch Claude Code through the proxy
 claude-ccs opencode

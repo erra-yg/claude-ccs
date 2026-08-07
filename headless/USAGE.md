@@ -51,10 +51,10 @@ source ~/.zshrc        # 或开新终端
 | 文件 | 必需 | 内容 |
 |---|---|---|
 | `base-url` | 是 | OpenAI 兼容端点，**不要带末尾 `/v1`**（代理会自己拼 `/v1/chat/completions`） |
-| `auth-token` 或 `keyfile` | 是 | `auth-token` = key 本身；`keyfile` = 存 key 的文件路径（推荐，单一密钥源） |
+| `auth-token` 或 `keyfile` | 是 | `auth-token` = key 本身（**推荐**，profile 自包含）；`keyfile` = 存 key 的文件路径（备选，指向外部密钥文件） |
 | `model` | 否 | model id |
 
-> 用 `keyfile` 时，建议把 key 文件 `chmod 600`。`base-url` 若带了 `/v1`，代理会拼成 `/v1/v1/...` 导致失败。
+> 建议把 `auth-token`（或 `keyfile` 指向的文件）`chmod 600`。`base-url` 若带了 `/v1`，代理会拼成 `/v1/v1/...` 导致失败。
 
 ---
 
@@ -66,9 +66,8 @@ opencode Go 是 opencode.ai 的低价订阅，OpenAI 兼容端点 `https://openc
 mkdir -p ~/.config/ccs-providers/opencode
 echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url
 echo 'deepseek-v4-flash[1m]'          > ~/.config/ccs-providers/opencode/model
-# 把你的 opencode API key 存到一个文件（假设 ~/.secrets/opencode-key），然后：
-chmod 600 ~/.secrets/opencode-key
-echo "$HOME/.secrets/opencode-key" > ~/.config/ccs-providers/opencode/keyfile
+echo '你的_API_KEY'                 > ~/.config/ccs-providers/opencode/auth-token   # key 本身，直接放进 profile
+chmod 600 ~/.config/ccs-providers/opencode/auth-token
 ```
 
 注意 `base-url` 是 `https://opencode.ai/zen/go`（**不带** `/v1`）。
@@ -119,7 +118,8 @@ cc 发 Anthropic `/v1/messages` → 代理翻成 OpenAI `chat/completions` 打�
 mkdir -p ~/.config/ccs-providers/deepseek
 echo 'https://api.deepseek.com' > ~/.config/ccs-providers/deepseek/base-url
 echo 'deepseek-chat'            > ~/.config/ccs-providers/deepseek/model
-echo "$HOME/.secrets/deepseek-key" > ~/.config/ccs-providers/deepseek/keyfile
+echo '你的_API_KEY'             > ~/.config/ccs-providers/deepseek/auth-token
+chmod 600 ~/.config/ccs-providers/deepseek/auth-token
 claude-ccs deepseek
 ```
 
