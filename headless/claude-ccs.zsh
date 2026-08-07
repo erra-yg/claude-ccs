@@ -65,7 +65,36 @@ claude-ccs() {
 
     # Ensure the headless proxy is listening on 15721.
     if ! ss -tln 2>/dev/null | grep -q ':15721'; then
-        setsid "$CCS_BIN" proxy serve >>"$CCS_HOME/proxy.log" 2>&1 </dev/null & disown
+        # The detached proxy must reach OpenAI-compatible upstreams. In WSL/VPN
+        # setups a local HTTP proxy (Clash/V2Ray/mihomo) often runs but isn't
+        # exported into every shell, so the proxy's outbound calls fail. Resolve
+        # an outbound proxy URL and pass it to the proxy subprocess ONLY (never
+        # mutate the interactive shell). Precedence: CCS_OUTBOUND_PROXY env >
+        # already-exported *_proxy > auto-detected common local port. Disable
+        # with CCS_OUTBOUND_PROXY=none.
+        local _px=""
+        if [[ $CCS_OUTBOUND_PROXY == none ]]; then
+            :
+        elif [[ -n $CCS_OUTBOUND_PROXY ]]; then
+            _px=$CCS_OUTBOUND_PROXY
+        elif [[ -n ${https_proxy:-${HTTPS_PROXY:-}} ]]; then
+            _px=${https_proxy:-$HTTPS_PROXY}
+        else
+            local _pport
+            for _pport in 7897 7890 7891 10809 1080; do
+                if timeout 0.3 bash -c "</dev/tcp/127.0.0.1/$_pport" 2>/dev/null; then
+                    _px=http://127.0.0.1:$_pport
+                    break
+                fi
+            done
+        fi
+        if [[ -n $_px ]]; then
+            setsid env "HTTPS_PROXY=$_px" "HTTP_PROXY=$_px" "https_proxy=$_px" "http_proxy=$_px" \
+                "NO_PROXY=127.0.0.1,localhost,::1" "no_proxy=127.0.0.1,localhost,::1" \
+                "$CCS_BIN" proxy serve >>"$CCS_HOME/proxy.log" 2>&1 </dev/null & disown
+        else
+            setsid "$CCS_BIN" proxy serve >>"$CCS_HOME/proxy.log" 2>&1 </dev/null & disown
+        fi
         local i
         for ((i = 0; i < 60; i++)); do
             ss -tln 2>/dev/null | grep -q ':15721' && break
