@@ -16,7 +16,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="$REPO_DIR/src-tauri/target/release/cc-switch"
 ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
-PROFILES_DIR="${CCS_PROFILES_DIR:-$HOME/.config/ccs-profiles}"
+PROFILES_DIR="${CCS_PROFILES_DIR:-$HOME/.config/ccs-providers}"
 
 say() { printf '[claude-ccs] %s\n' "$*"; }
 die() { printf '[claude-ccs error] %s\n' "$*" >&2; exit 1; }
@@ -92,4 +92,6 @@ Done. Next:
 
 The proxy runs detached (survives terminal close) and NEVER writes ~/.claude.
 Logs: ~/.cc-switch-headless/proxy.log
+
+Uninstall (fully reverses everything above): ./uninstall-claude-ccs.sh
 EOF

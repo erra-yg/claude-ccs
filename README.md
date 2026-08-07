@@ -36,6 +36,15 @@ claude-ccs opencode
 
 `claude-ccs` creates the provider (first run), switches to it, starts the headless proxy on `127.0.0.1:15721`, and launches `claude` pointed at it. The proxy runs detached and never touches `~/.claude`.
 
+## Uninstall
+
+```bash
+./uninstall-claude-ccs.sh            # stops proxy, unwires ~/.zshrc, secure-erases keys+state, removes repo
+./uninstall-claude-ccs.sh --dry-run  # preview; --keep-repo / --keep-profiles / --keep-state to preserve parts
+```
+
+Reverses the install + runtime footprint in a safe order; never touches `~/.claude/`, system packages, the Rust toolchain, or `~/.zshrc` outside the marked block.
+
 ## What changed vs upstream
 
 Only ~500 lines across 5 source files (live-write guards) + the `headless/` tooling. No upstream feature removed. Upstream docs preserved at [README-upstream.md](README-upstream.md).

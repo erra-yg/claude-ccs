@@ -159,14 +159,27 @@ CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless \
 
 ## 11. 卸载
 
+一键彻底卸载（停止代理 → 从 `~/.zshrc` 摘除 claude-ccs 块 → 安全擦除 key 与状态目录 → 删除仓库）：
+
 ```bash
-# 删代理状态
-rm -rf ~/.cc-switch-headless
-# 从 ~/.zshrc 删 claude-ccs 块（# >>> claude-ccs (headless) >>> 到 <<< 之间）
-# 删仓库与 profile
-rm -rf ~/claude-wksp/cc-switch-headless ~/.config/ccs-providers
+./uninstall-claude-ccs.sh            # 交互式：先列出要删什么，再 y/N 确认
+./uninstall-claude-ccs.sh --dry-run  # 只预览，不动任何东西
+./uninstall-claude-ccs.sh -y         # 跳过确认直接执行
 ```
-你的 `~/.claude/` 本来就没被碰过，无需还原。
+
+它会：
+
+- **停掉** `127.0.0.1:15721` 上的 headless 代理（`setsid` 启动、关终端不死的那个）
+- **手术式摘除** `~/.zshrc` 里 `# >>> claude-ccs (headless) >>>` … `<<<` 标记块（先备份成 `~/.zshrc.ccs-uninstall.bak`），块外内容不动
+- **安全擦除**（`shred`，尽力而为）provider 的 `auth-token`/`keyfile`、代理 DB 等，再 `rm` 掉 `~/.cc-switch-headless/` 和 `~/.config/ccs-providers/`
+- **删除**克隆的仓库本身（延迟执行，让脚本先跑完）
+
+可选保留：`--keep-repo`（留仓库）、`--keep-profiles`（留含 key 的 profile）、`--keep-state`（留 `~/.cc-switch-headless`）。
+
+> 不碰：`~/.claude/`（本来就没被写过）、系统包、Rust 工具链、`~/.zshrc` 标记块以外部分。Rust/build 依赖是共享的，脚本不会自动卸（结尾会打印手动卸载命令）。
+> 当前 shell 里已加载的 `claude-ccs` 函数要开新终端（或 `unset -f claude-ccs`）才消失。
+
+手动卸载（无脚本时）：停代理（`kill $(ss -ltnp | grep :15721 | grep -oE 'pid=[0-9]+' | grep -oE '[0-9]+')`）→ 删 `~/.cc-switch-headless` 与 `~/.config/ccs-providers` → 从 `~/.zshrc` 删标记块 → `rm -rf` 仓库。
 
 ---
 
