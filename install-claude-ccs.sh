@@ -41,7 +41,25 @@ if ! command -v cargo >/dev/null 2>&1; then
     . "$HOME/.cargo/env"
 fi
 command -v cargo >/dev/null 2>&1 || die "cargo still unavailable after rustup install"
-# rust-toolchain.toml pins 1.91+; rustup auto-installs that toolchain on first cargo use.
+# Cargo.toml sets rust-version (MSRV); we build with the user's installed Rust.
+# No rust-toolchain.toml channel pin -> no forced old-toolchain download (which
+# fails in restricted networks); cargo errors only if the installed Rust < MSRV.
+
+# --- 2b. outbound proxy for the build (crates.io / rustup fetches) ---
+# In WSL/VPN setups direct HTTPS is often blackholed; if a local HTTP proxy
+# (Clash/V2Ray/mihomo) is reachable, export it so cargo/rustup can fetch.
+# Override: HTTPS_PROXY already set -> honored as-is; CCS_OUTBOUND_PROXY=none -> skip.
+if [ "${CCS_OUTBOUND_PROXY:-}" != "none" ] && [ -z "${HTTPS_PROXY:-}${https_proxy:-}" ]; then
+    for _p in 7897 7890 7891 10809 1080; do
+        if timeout 0.3 bash -c "</dev/tcp/127.0.0.1/$_p" 2>/dev/null; then
+            export HTTPS_PROXY="http://127.0.0.1:$_p" https_proxy="$HTTPS_PROXY"
+            export HTTP_PROXY="$HTTPS_PROXY" http_proxy="$HTTPS_PROXY"
+            export NO_PROXY="127.0.0.1,localhost,::1" no_proxy="$NO_PROXY"
+            say "detected local outbound proxy 127.0.0.1:$_p for build (set CCS_OUTBOUND_PROXY=none to disable)"
+            break
+        fi
+    done
+fi
 
 # --- 3. build ---
 say "building cc-switch (release). First build downloads + compiles many crates (~5-10 min)..."

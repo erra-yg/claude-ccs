@@ -36,7 +36,7 @@ CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless \
   cc-switch provider add --app claude --template custom \
     --name opencode --id opencode \
     --base-url https://opencode.ai/zen/go --api-key "$KEY" --api-key-field api-key \
-    --model deepseek-v4-flash --api-format openai_chat
+    --model deepseek-v4-flash[1m] --api-format openai_chat   # [1m] = 1M context; proxy strips the suffix before upstream
 # (see "Known issue: apiFormat" below for the one-line normalize)
 
 # 2. start the proxy (headless, no takeover — it will NOT touch ~/.claude)
