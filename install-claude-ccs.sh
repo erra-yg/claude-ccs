@@ -52,10 +52,10 @@ command -v cargo >/dev/null 2>&1 || die "cargo still unavailable after rustup in
 if [ "${CCS_OUTBOUND_PROXY:-}" != "none" ] && [ -z "${HTTPS_PROXY:-}${https_proxy:-}" ]; then
     for _p in 7897 7890 7891 10809 1080; do
         if timeout 0.3 bash -c "</dev/tcp/127.0.0.1/$_p" 2>/dev/null; then
-            export HTTPS_PROXY="http://127.0.0.1:$_p" https_proxy="$HTTPS_PROXY"
-            export HTTP_PROXY="$HTTPS_PROXY" http_proxy="$HTTPS_PROXY"
-            export NO_PROXY="127.0.0.1,localhost,::1" no_proxy="$NO_PROXY"
-            say "detected local outbound proxy 127.0.0.1:$_p for build (set CCS_OUTBOUND_PROXY=none to disable)"
+            _px="http://127.0.0.1:$_p"
+            export HTTPS_PROXY="$_px" https_proxy="$_px" HTTP_PROXY="$_px" http_proxy="$_px"
+            export NO_PROXY="127.0.0.1,localhost,::1" no_proxy="127.0.0.1,localhost,::1"
+            say "detected local outbound proxy $_px for build (set CCS_OUTBOUND_PROXY=none to disable)"
             break
         fi
     done
