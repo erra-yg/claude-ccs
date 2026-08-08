@@ -53,6 +53,7 @@ source ~/.zshrc        # 或开新终端
 | `base-url` | 是 | OpenAI 兼容端点，**不要带末尾 `/v1`**（代理会自己拼 `/v1/chat/completions`） |
 | `auth-token` 或 `keyfile` | 是 | `auth-token` = key 本身（**推荐**，profile 自包含）；`keyfile` = 存 key 的文件路径（备选，指向外部密钥文件） |
 | `model` | 否 | model id |
+| `classifier-model` | 否 | auto mode 安全分类使用的上游 model id；主模型为 DeepSeek 等无法稳定输出分类格式的模型时应配置 |
 
 > 建议把 `auth-token`（或 `keyfile` 指向的文件）`chmod 600`。`base-url` 若带了 `/v1`，代理会拼成 `/v1/v1/...` 导致失败。
 
@@ -65,14 +66,17 @@ opencode Go 是 opencode.ai 的低价订阅，OpenAI 兼容端点 `https://openc
 ```bash
 mkdir -p ~/.config/ccs-providers/opencode
 echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url
-echo 'deepseek-v4-flash[1m]'          > ~/.config/ccs-providers/opencode/model
-echo '你的_API_KEY'                 > ~/.config/ccs-providers/opencode/auth-token   # key 本身，直接放进 profile
+echo 'deepseek-v4-flash[1m]' > ~/.config/ccs-providers/opencode/model
+echo 'qwen3.7-max'            > ~/.config/ccs-providers/opencode/classifier-model
+echo '你的_API_KEY'           > ~/.config/ccs-providers/opencode/auth-token   # key 本身，直接放进 profile
 chmod 600 ~/.config/ccs-providers/opencode/auth-token
 ```
 
 注意 `base-url` 是 `https://opencode.ai/zen/go`（**不带** `/v1`）。
 
 > **1M 上下文**：model 末尾的 `[1m]` 让 Claude Code 按 1M 窗口管理会话；代理在发往上游前会**自动剥掉 `[1m]`**，opencode 收到的仍是合法的 `deepseek-v4-flash`。模型若不支持 1M 就别加这个后缀。
+
+> **auto mode 分类器**：Claude Code 2.1.224/2.1.226 会用 Sonnet 角色做安全分类。`classifier-model` 写供应商真实提供的上游模型名；launcher 会把 Sonnet 角色映射到该槽，同时保持普通请求仍走 `model`。`qwen3.7-max` 已于 2026-08-08 在 opencode Go 实测通过；若供应商模型目录变化，应先验证替代模型能稳定返回分类格式并拦截危险 canary。
 
 ---
 
@@ -151,6 +155,7 @@ CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless \
 | `claude-ccs` 命令找不到 | `source ~/.zshrc` 或检查 `~/.zshrc` 里 `# >>> claude-ccs (headless) >>>` 块；确认 `$CCS_BIN` 路径存在 |
 | `cc-switch binary not found` | 重跑 `./install-claude-ccs.sh` 重新构建 |
 | cc 报 `401 Missing API key` | ① profile 里 key 没读到（检查 `auth-token`/`keyfile`）；② 极少数情况是代理协议没命中——确认 profile 的 `base-url` 不带 `/v1` |
+| auto mode 报模型暂不可用 | 给 profile 配置已验证的 `classifier-model`；重跑 `claude-ccs <name>` 会同步 provider 的 Sonnet 槽 |
 | 代理没起来 | 看 `~/.cc-switch-headless/proxy.log`；手动 `CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless cc-switch proxy serve` 看报错 |
 | 想换供应商不生效 | `claude-ccs` 每次都重选当前供应商；若手动改过 DB，重跑一次 `claude-ccs <name>` |
 | 端口 15721 被占 | 改 `$CCS_PORT`（在 `claude-ccs.zsh` 里）或停掉占用进程 |

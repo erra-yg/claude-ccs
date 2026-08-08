@@ -36,7 +36,8 @@ CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless \
   cc-switch provider add --app claude --template custom \
     --name opencode --id opencode \
     --base-url https://opencode.ai/zen/go --api-key "$KEY" --api-key-field api-key \
-    --model deepseek-v4-flash[1m] --api-format openai_chat   # [1m] = 1M context; proxy strips the suffix before upstream
+    --model deepseek-v4-flash[1m] --sonnet-model qwen3.7-max \
+    --api-format openai_chat   # [1m] = 1M context; proxy strips the suffix before upstream
 # (see "Known issue: apiFormat" below for the one-line normalize)
 
 # 2. start the proxy (headless, no takeover — it will NOT touch ~/.claude)
@@ -53,6 +54,11 @@ Point Claude at the proxy with the launcher you already use. For a `claude-profi
 ```
 
 Then `claude-opencode` (or whatever your function is called) routes through the proxy.
+
+Claude Code 2.1.224 and 2.1.226 use the Sonnet role for auto-mode safety
+classification. Keep the ordinary request on the default model and configure a
+classifier-capable upstream in the Sonnet slot; `claude-ccs.zsh` does this from
+the profile's `classifier-model` file and re-applies the mapping on every launch.
 
 ## Helpers
 

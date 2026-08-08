@@ -1,13 +1,17 @@
 # claude-ccs.zsh — the `claude-ccs` zsh function (canonical copy; the live one
-# is inlined in ~/.zshrc). Launch Claude Code through the HEADLESS cc-switch proxy
-# at 127.0.0.1:15721 (Anthropic<->OpenAI translation + failover), with
-# CC_SWITCH_HEADLESS guaranteeing ~/.claude is never rewritten.
+# is sourced from ~/.zshrc via the installer's marked block). Launch Claude Code
+# through the HEADLESS cc-switch proxy at 127.0.0.1:15721 (Anthropic<->OpenAI
+# translation + failover), with CC_SWITCH_HEADLESS guaranteeing ~/.claude is
+# never rewritten.
 #
 # Provider profiles live in ~/.config/ccs-providers/<name>/ :
-#   base-url    OpenAI-compatible endpoint WITHOUT trailing /v1   (required)
-#   auth-token  API key value                                     (required, or keyfile)
-#   keyfile     path to a file holding the API key                (alt to auth-token)
-#   model       model id                                          (optional)
+#   base-url           OpenAI-compatible endpoint WITHOUT trailing /v1   (required)
+#   auth-token         API key value                                     (required, or keyfile)
+#   keyfile            path to a file holding the API key                (alt to auth-token)
+#   model              model id                                          (optional)
+#   classifier-model   upstream model id for auto-mode classification; the
+#                      launcher binds Claude's Sonnet role to this model
+#                      (for example, qwen3.7-max)                           (optional)
 #
 # Usage:   claude-ccs <name> [claude args...]
 # Example: claude-ccs opencode
@@ -31,9 +35,12 @@ claude-ccs() {
     local prof="$profdir/$name"
     [ -d "$prof" ] || { print -u2 "claude-ccs: no provider profile at $prof"; return 2; }
 
-    local base_url="" model="" key=""
+    local base_url="" model="" key="" cmodel=""
     base_url=$(<"$prof/base-url" 2>/dev/null)
     [ -r "$prof/model" ] && model=$(<"$prof/model")
+    [ -r "$prof/classifier-model" ] && cmodel=$(<"$prof/classifier-model")
+    cmodel=${cmodel#"${cmodel%%[![:space:]]*}"}
+    cmodel=${cmodel%"${cmodel##*[![:space:]]}"}
     if   [ -r "$prof/auth-token" ]; then key=$(<"$prof/auth-token")
     elif [ -r "$prof/keyfile" ];   then local kf; kf=$(<"$prof/keyfile"); [ -r "$kf" ] && key=$(<"$kf"); fi
     [ -n "$base_url" ] && [ -n "$key" ] || { print -u2 "claude-ccs: $prof needs base-url + (auth-token | keyfile)"; return 2; }
@@ -51,17 +58,38 @@ claude-ccs() {
     # Work around upstream's apiFormat(camel)/api_format(snake) mismatch so the proxy translates.
     if ! "$CCS_BIN" provider switch "$name" >/dev/null 2>&1; then
         local m=(); [ -n "$model" ] && m=(--model "$model")
+        local sm=(); [ -n "$cmodel" ] && sm=(--sonnet-model "$cmodel")
         "$CCS_BIN" provider add --app claude --template custom \
             --name "$name" --id "$name" \
             --base-url "$base_url" --api-key "$key" --api-key-field api-key \
-            --api-format openai_chat "${m[@]}" >/dev/null 2>&1 || true
-        "$CCS_BIN" provider switch "$name" >/dev/null 2>&1
+            --api-format openai_chat "${m[@]}" "${sm[@]}" >/dev/null 2>&1 || {
+            print -u2 "claude-ccs: failed to create provider $name"
+            return 1
+        }
+        "$CCS_BIN" provider switch "$name" >/dev/null 2>&1 || {
+            print -u2 "claude-ccs: failed to switch to newly created provider $name"
+            return 1
+        }
     fi
     # `provider switch` re-serializes meta and drops the snake_case `api_format`
     # the proxy actually reads (upstream stores camelCase `apiFormat`), so re-add
     # the snake key as the LAST write — after every switch, on every call.
-    local _norm="UPDATE providers SET meta = json_set(json_remove(meta,'\$.apiFormat'),'\$.api_format','openai_chat') WHERE id='$name' AND app_type='claude';"
-    sqlite3 "$db" "$_norm" 2>/dev/null
+    local _qname="${name//\'/\'\'}"
+    local _set="meta = json_set(json_remove(meta,'\$.apiFormat'),'\$.api_format','openai_chat')"
+    if [ -n "$cmodel" ]; then
+        local _qcmodel="${cmodel//\'/\'\'}"
+        _set+=", settings_config = json_set(settings_config,'\$.env.\"ANTHROPIC_DEFAULT_SONNET_MODEL\"','$_qcmodel')"
+    fi
+    local _selector="app_type='claude' AND is_current=1 AND (id='$_qname' OR lower(trim(name))=lower(trim('$_qname')))"
+    local _updated
+    _updated=$(command sqlite3 -bail -batch -noheader -list -init /dev/null "$db" "BEGIN IMMEDIATE; UPDATE providers SET $_set WHERE $_selector AND (SELECT count(*) FROM providers WHERE $_selector)=1; SELECT changes(); COMMIT;" 2>/dev/null) || {
+        print -u2 "claude-ccs: failed to synchronize provider routing in $db"
+        return 1
+    }
+    [ "$_updated" = 1 ] || {
+        print -u2 "claude-ccs: expected one active Claude provider, synchronized ${_updated:-0}"
+        return 1
+    }
 
     # Ensure the headless proxy is listening on 15721.
     if ! ss -tln 2>/dev/null | grep -q ':15721'; then
@@ -109,13 +137,24 @@ claude-ccs() {
     # into the interactive shell.
     (
         _claude_clean_env 2>/dev/null
+        # This variable is ignored by Claude Code 2.1.224/2.1.226, but an
+        # inherited value could override the controlled Sonnet role in another
+        # build. The launcher owns classifier routing, so never pass it through.
+        unset CLAUDE_CODE_AUTO_MODE_MODEL
         # Export the proxy's model id so Claude Code recognizes + restores it instead
         # of falling back to claude-opus-5 ("Session model <id> could not be restored").
         if [ -n "$model" ]; then
             export ANTHROPIC_MODEL="$model"
             export ANTHROPIC_DEFAULT_OPUS_MODEL="$model"
-            export ANTHROPIC_DEFAULT_SONNET_MODEL="$model"
             export ANTHROPIC_DEFAULT_HAIKU_MODEL="$model"
+        fi
+        # Claude Code 2.1.224 and 2.1.226 derive auto-mode classification from
+        # the Sonnet role. The proxy maps this role id to classifier-model while
+        # ordinary requests remain on the profile model.
+        if [ -n "$cmodel" ]; then
+            export ANTHROPIC_DEFAULT_SONNET_MODEL=claude-sonnet-5
+        elif [ -n "$model" ]; then
+            export ANTHROPIC_DEFAULT_SONNET_MODEL="$model"
         fi
         # Don't let CC assume a 200k ceiling for an unrecognized model id; let the
         # upstream API decide context size (silences the "unknown model window" notice).

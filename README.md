@@ -26,8 +26,9 @@ source ~/.zshrc        # or open a new terminal
 # 1. create a provider profile (example: opencode Go)
 mkdir -p ~/.config/ccs-providers/opencode
 echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url   # NO trailing /v1
-echo 'deepseek-v4-flash[1m]'          > ~/.config/ccs-providers/opencode/model   # [1m] = 1M context; proxy strips the suffix before upstream
-echo 'YOUR_API_KEY'            > ~/.config/ccs-providers/opencode/auth-token # the API key value itself
+echo 'deepseek-v4-flash[1m]' > ~/.config/ccs-providers/opencode/model          # main model; [1m] is stripped upstream
+echo 'qwen3.7-max'            > ~/.config/ccs-providers/opencode/classifier-model # auto-mode safety classifier
+echo 'YOUR_API_KEY'           > ~/.config/ccs-providers/opencode/auth-token    # the API key value itself
 chmod 600 ~/.config/ccs-providers/opencode/auth-token
 
 # 2. launch Claude Code through the proxy
@@ -35,6 +36,11 @@ claude-ccs opencode
 ```
 
 `claude-ccs` creates the provider (first run), switches to it, starts the headless proxy on `127.0.0.1:15721`, and launches `claude` pointed at it. The proxy runs detached and never touches `~/.claude`.
+
+`classifier-model` is the provider's upstream model for Claude Code auto-mode
+safety checks. It is optional when the main model can reliably perform those
+checks, but should be set when using DeepSeek as the main model. The opencode Go
+example above was verified with `qwen3.7-max` on 2026-08-08.
 
 ## Uninstall
 
