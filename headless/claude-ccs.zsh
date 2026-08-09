@@ -26,7 +26,7 @@
 #      NULL -> upstream 401 "Missing API key."). $key is the authoritative
 #      source outside the DB.
 #
-# Provider profiles live in ~/.config/ccs-providers/<name>/ :
+# Provider profiles live in ~/.config/llm-profile/<name>/ :
 #   base-url       OpenAI-compatible endpoint WITHOUT trailing /v1        (required)
 #   auth-token     API key value                                         (required, or keyfile)
 #   keyfile        path to a file holding the API key                    (alt to auth-token)
@@ -41,7 +41,7 @@
 claude-ccs() {
     emulate -L zsh
     local name="${1:-}"
-    local profdir="$HOME/.config/ccs-providers"
+    local profdir="$HOME/.config/llm-profile"
 
     if [ -z "$name" ]; then
         print -P "%F{cyan}ccs providers:%f"

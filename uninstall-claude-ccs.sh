@@ -25,7 +25,7 @@ set -uo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
 CCS_HOME="$HOME/.cc-switch-headless"
-PROFILES_DIR="$HOME/.config/ccs-providers"
+PROFILES_DIR="$HOME/.config/llm-profile"
 STRAY_DIR="$HOME/.config/ccs-profiles"   # leftover from an install-script default-name bug
 PORT="${CCS_PORT:-15721}"                 # overridable for tests (mirrors ccs-proxy-up.sh)
 BLOCK_START='# >>> claude-ccs (headless) >>>'
