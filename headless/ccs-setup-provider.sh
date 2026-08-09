@@ -8,7 +8,7 @@
 # Usage:
 #   ccs-setup-provider.sh --name opencode \
 #                         --base-url https://opencode.ai/zen/go \
-#                         --keyfile ~/.config/ccs-providers/opencode/auth-token \
+#                         --keyfile ~/.config/llm-profile/opencode/auth-token \
 #                         --model deepseek-v4-flash[1m]
 #
 # Env:

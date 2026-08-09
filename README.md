@@ -12,7 +12,7 @@ It ships a one-command zsh launcher, **`claude-ccs`**, that routes Claude Code t
 git clone https://github.com/erra-yg/claude-ccs && cd claude-ccs && ./install-claude-ccs.sh
 ```
 
-`install-claude-ccs.sh` ensures a C toolchain + Rust, builds cc-switch, wires `claude-ccs` into `~/.zshrc` (with the correct `CCS_BIN` path), and creates `~/.config/ccs-providers/`. First build is ~5–10 min. Then:
+`install-claude-ccs.sh` ensures a C toolchain + Rust, builds cc-switch, wires `claude-ccs` into `~/.zshrc` (with the correct `CCS_BIN` path), and creates `~/.config/llm-profile/`. First build is ~5–10 min. Then:
 
 ```bash
 source ~/.zshrc        # or open a new terminal
@@ -24,12 +24,12 @@ source ~/.zshrc        # or open a new terminal
 
 ```bash
 # 1. create a provider profile (example: opencode Go)
-mkdir -p ~/.config/ccs-providers/opencode
-echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url   # NO trailing /v1
-echo 'deepseek-v4-flash[1m]' > ~/.config/ccs-providers/opencode/model          # main model; [1m] is stripped upstream
-echo 'qwen3.7-max'            > ~/.config/ccs-providers/opencode/classifier-model # auto-mode safety classifier
-echo 'YOUR_API_KEY'           > ~/.config/ccs-providers/opencode/auth-token    # the API key value itself
-chmod 600 ~/.config/ccs-providers/opencode/auth-token
+mkdir -p ~/.config/llm-profile/opencode
+echo 'https://opencode.ai/zen/go' > ~/.config/llm-profile/opencode/base-url   # NO trailing /v1
+echo 'deepseek-v4-flash[1m]' > ~/.config/llm-profile/opencode/model          # main model; [1m] is stripped upstream
+echo 'qwen3.7-max'            > ~/.config/llm-profile/opencode/classifier-model # auto-mode safety classifier
+echo 'YOUR_API_KEY'           > ~/.config/llm-profile/opencode/auth-token    # the API key value itself
+chmod 600 ~/.config/llm-profile/opencode/auth-token
 
 # 2. launch Claude Code through the proxy
 claude-ccs opencode

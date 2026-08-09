@@ -6,7 +6,7 @@ test_root=$(mktemp -d /tmp/ccs-auto-mode-launcher-test.XXXXXX)
 trap 'rm -rf -- "$test_root"' EXIT
 
 test_home="$test_root/home"
-profiles_dir="$test_home/.config/ccs-providers"
+profiles_dir="$test_home/.config/llm-profile"
 profile_dir="$profiles_dir/test"
 stub_bin="$test_root/bin"
 capture="$test_root/claude-env.txt"

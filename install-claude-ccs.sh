@@ -8,7 +8,7 @@
 #   1. ensure a C toolchain (build-essential) and Rust (rustup) are present
 #   2. build cc-switch (release) -> src-tauri/target/release/cc-switch
 #   3. wire `claude-ccs` into ~/.zshrc (CCS_BIN / CCS_HOME + source), idempotently
-#   4. create ~/.config/ccs-providers/ (where provider profiles live)
+#   4. create ~/.config/llm-profile/ (where provider profiles live)
 #
 # Then you create one provider profile and run `claude-ccs <name>` (see headless/USAGE.md).
 set -euo pipefail
@@ -16,7 +16,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="$REPO_DIR/src-tauri/target/release/cc-switch"
 ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
-PROFILES_DIR="${CCS_PROFILES_DIR:-$HOME/.config/ccs-providers}"
+PROFILES_DIR="${CCS_PROFILES_DIR:-$HOME/.config/llm-profile}"
 
 say() { printf '[claude-ccs] %s\n' "$*"; }
 die() { printf '[claude-ccs error] %s\n' "$*" >&2; exit 1; }
@@ -97,11 +97,11 @@ Done. Next:
        source ~/.zshrc        # or open a new terminal
 
   2. Create a provider profile (example: opencode Go). Put each value in its own file:
-       mkdir -p ~/.config/ccs-providers/opencode
-       echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url
-       echo 'deepseek-v4-flash[1m]'          > ~/.config/ccs-providers/opencode/model
-       echo 'YOUR_API_KEY'            > ~/.config/ccs-providers/opencode/auth-token
-       chmod 600 ~/.config/ccs-providers/opencode/auth-token
+       mkdir -p ~/.config/llm-profile/opencode
+       echo 'https://opencode.ai/zen/go' > ~/.config/llm-profile/opencode/base-url
+       echo 'deepseek-v4-flash[1m]'          > ~/.config/llm-profile/opencode/model
+       echo 'YOUR_API_KEY'            > ~/.config/llm-profile/opencode/auth-token
+       chmod 600 ~/.config/llm-profile/opencode/auth-token
      # auth-token = your API key value (chmod 600). base-url must NOT end in /v1.
      # Full reference: headless/USAGE.md
 

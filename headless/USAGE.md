@@ -33,7 +33,7 @@ cd ~/claude-wksp/cc-switch-headless
 ./install-claude-ccs.sh
 ```
 
-`install-claude-ccs.sh` 会自动：装 build 工具链 → 装 Rust（若缺）→ 构建 cc-switch → 把 `claude-ccs` 接入 `~/.zshrc` → 建 `~/.config/ccs-providers/`。首次构建约 5–10 分钟。
+`install-claude-ccs.sh` 会自动：装 build 工具链 → 装 Rust（若缺）→ 构建 cc-switch → 把 `claude-ccs` 接入 `~/.zshrc` → 建 `~/.config/llm-profile/`。首次构建约 5–10 分钟。
 
 装完：
 ```bash
@@ -46,7 +46,7 @@ source ~/.zshrc        # 或开新终端
 
 ## 4. 核心概念：供应商 profile
 
-每个供应商是 `~/.config/ccs-providers/<名字>/` 下的几个小文件：
+每个供应商是 `~/.config/llm-profile/<名字>/` 下的几个小文件：
 
 | 文件 | 必需 | 内容 |
 |---|---|---|
@@ -64,12 +64,12 @@ source ~/.zshrc        # 或开新终端
 opencode Go 是 opencode.ai 的低价订阅，OpenAI 兼容端点 `https://opencode.ai/zen/go/v1`，可用 `deepseek-v4-flash`。
 
 ```bash
-mkdir -p ~/.config/ccs-providers/opencode
-echo 'https://opencode.ai/zen/go' > ~/.config/ccs-providers/opencode/base-url
-echo 'deepseek-v4-flash[1m]' > ~/.config/ccs-providers/opencode/model
-echo 'qwen3.7-max'            > ~/.config/ccs-providers/opencode/classifier-model
-echo '你的_API_KEY'           > ~/.config/ccs-providers/opencode/auth-token   # key 本身，直接放进 profile
-chmod 600 ~/.config/ccs-providers/opencode/auth-token
+mkdir -p ~/.config/llm-profile/opencode
+echo 'https://opencode.ai/zen/go' > ~/.config/llm-profile/opencode/base-url
+echo 'deepseek-v4-flash[1m]' > ~/.config/llm-profile/opencode/model
+echo 'qwen3.7-max'            > ~/.config/llm-profile/opencode/classifier-model
+echo '你的_API_KEY'           > ~/.config/llm-profile/opencode/auth-token   # key 本身，直接放进 profile
+chmod 600 ~/.config/llm-profile/opencode/auth-token
 ```
 
 注意 `base-url` 是 `https://opencode.ai/zen/go`（**不带** `/v1`）。
@@ -119,11 +119,11 @@ cc 发 Anthropic `/v1/messages` → 代理翻成 OpenAI `chat/completions` 打�
 丢一个目录即可，例如 DeepSeek 官方：
 
 ```bash
-mkdir -p ~/.config/ccs-providers/deepseek
-echo 'https://api.deepseek.com' > ~/.config/ccs-providers/deepseek/base-url
-echo 'deepseek-chat'            > ~/.config/ccs-providers/deepseek/model
-echo '你的_API_KEY'             > ~/.config/ccs-providers/deepseek/auth-token
-chmod 600 ~/.config/ccs-providers/deepseek/auth-token
+mkdir -p ~/.config/llm-profile/deepseek
+echo 'https://api.deepseek.com' > ~/.config/llm-profile/deepseek/base-url
+echo 'deepseek-chat'            > ~/.config/llm-profile/deepseek/model
+echo '你的_API_KEY'             > ~/.config/llm-profile/deepseek/auth-token
+chmod 600 ~/.config/llm-profile/deepseek/auth-token
 claude-ccs deepseek
 ```
 
@@ -176,7 +176,7 @@ CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless \
 
 - **停掉** `127.0.0.1:15721` 上的 headless 代理（`setsid` 启动、关终端不死的那个）
 - **手术式摘除** `~/.zshrc` 里 `# >>> claude-ccs (headless) >>>` … `<<<` 标记块（先备份成 `~/.zshrc.ccs-uninstall.bak`），块外内容不动
-- **安全擦除**（`shred`，尽力而为）provider 的 `auth-token`/`keyfile`、代理 DB 等，再 `rm` 掉 `~/.cc-switch-headless/` 和 `~/.config/ccs-providers/`
+- **安全擦除**（`shred`，尽力而为）provider 的 `auth-token`/`keyfile`、代理 DB 等，再 `rm` 掉 `~/.cc-switch-headless/` 和 `~/.config/llm-profile/`
 - **删除**克隆的仓库本身（延迟执行，让脚本先跑完）
 
 可选保留：`--keep-repo`（留仓库）、`--keep-profiles`（留含 key 的 profile）、`--keep-state`（留 `~/.cc-switch-headless`）。
@@ -184,7 +184,7 @@ CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless \
 > 不碰：`~/.claude/`（本来就没被写过）、系统包、Rust 工具链、`~/.zshrc` 标记块以外部分。Rust/build 依赖是共享的，脚本不会自动卸（结尾会打印手动卸载命令）。
 > 当前 shell 里已加载的 `claude-ccs` 函数要开新终端（或 `unset -f claude-ccs`）才消失。
 
-手动卸载（无脚本时）：停代理（`kill $(ss -ltnp | grep :15721 | grep -oE 'pid=[0-9]+' | grep -oE '[0-9]+')`）→ 删 `~/.cc-switch-headless` 与 `~/.config/ccs-providers` → 从 `~/.zshrc` 删标记块 → `rm -rf` 仓库。
+手动卸载（无脚本时）：停代理（`kill $(ss -ltnp | grep :15721 | grep -oE 'pid=[0-9]+' | grep -oE '[0-9]+')`）→ 删 `~/.cc-switch-headless` 与 `~/.config/llm-profile` → 从 `~/.zshrc` 删标记块 → `rm -rf` 仓库。
 
 ---
 

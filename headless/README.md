@@ -4,7 +4,7 @@ A tiny patch on top of [cc-switch-cli](https://github.com/saladday/cc-switch-cli
 
 > When `CC_SWITCH_HEADLESS=1`, the process **never writes any file under `~/.claude/`** (nor any other app's live config). The local proxy — Anthropic↔OpenAI translation + failover — still runs and serves Claude Code via environment variables.
 
-This exists for the operator who launches `claude` through per-process env (e.g. a `claude-profiles` shell launcher) and does **not** want a GUI app rewriting `~/.claude/settings.json` out from under them.
+This exists for the operator who launches `claude` through per-process env (e.g. a `llm-profile` shell launcher) and does **not** want a GUI app rewriting `~/.claude/settings.json` out from under them.
 
 ## Why
 
@@ -44,10 +44,10 @@ CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless \
 CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless cc-switch proxy serve
 ```
 
-Point Claude at the proxy with the launcher you already use. For a `claude-profiles`-style launcher, add a profile whose `base-url` is the proxy and whose `auth-token` is any placeholder (the proxy injects the real upstream key; it accepts any inbound token on localhost):
+Point Claude at the proxy with the launcher you already use. For a `llm-profile`-style launcher, add a profile whose `base-url` is the proxy and whose `auth-token` is any placeholder (the proxy injects the real upstream key; it accepts any inbound token on localhost):
 
 ```
-~/.config/claude-profiles/opencode/
+~/.config/llm-profile/opencode/
   base-url     -> http://127.0.0.1:15721
   auth-token   -> dummy
   model        -> deepseek-v4-flash[1m]   # [1m] tells Claude Code 1M context; proxy strips it upstream
