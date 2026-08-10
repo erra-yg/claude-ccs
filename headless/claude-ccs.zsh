@@ -33,7 +33,7 @@
 #   model          default backend model id (e.g. deepseek-v4-flash[1m]) (required)
 #   model-opus     opus-role backend   (e.g. kimi-k3)                    (optional; default: $model)
 #   model-sonnet   sonnet-role + auto-mode classifier backend            (optional; default: $model)
-#                  (e.g. qwen3.8-max)
+#                  (e.g. qwen3.7-max — must be upstream-stable; qwen3.8-max observed flaky, see USAGE.md §10)
 #   model-haiku    haiku-role backend  (e.g. deepseek-v4-flash[1m])      (optional; default: $model)
 #
 # Usage:   claude-ccs <name> [claude args...]
