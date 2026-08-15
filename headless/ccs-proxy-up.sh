@@ -27,8 +27,45 @@ fi
 
 mkdir -p "$CCS_HOME"
 LOG="$CCS_HOME/proxy.log"
+
+# Egress policy (operator decision 2026-08-15, same as claude-ccs.zsh):
+# DIRECT first; fall back to the local proxy ladder only after repeated direct
+# failures. Every probe is a REAL HTTPS round trip to CCS_PROBE_URL — a bare TCP
+# connect passes even when Clash's selected node is dead (2026-08-15 incident:
+# hand-picked timeout node; proxy had 7897 baked in and every forward 502'd
+# while opencode.ai was fine direct). Shell proxy vars are stripped so they
+# cannot silently defeat direct-first.
+# Override: CCS_OUTBOUND_PROXY=none (force direct) | <url> (force that proxy).
+CCS_PROBE_URL="${CCS_PROBE_URL:-https://opencode.ai/}"
+px=""
+if [ "${CCS_OUTBOUND_PROXY:-}" = "none" ]; then
+  :
+elif [ -n "${CCS_OUTBOUND_PROXY:-}" ]; then
+  px="$CCS_OUTBOUND_PROXY"
+else
+  code=$(curl --noproxy '*' -m 5 -s -o /dev/null -w '%{http_code}' "$CCS_PROBE_URL" 2>/dev/null || true)
+  if [ -z "$code" ] || [ "$code" = "000" ]; then
+    sleep 1   # direct tried twice before falling back to a proxy
+    code=$(curl --noproxy '*' -m 5 -s -o /dev/null -w '%{http_code}' "$CCS_PROBE_URL" 2>/dev/null || true)
+  fi
+  if [ -z "$code" ] || [ "$code" = "000" ]; then
+    for p in 7897 7890 7891 10809 1080; do
+      code=$(curl -x "http://127.0.0.1:$p" -m 6 -s -o /dev/null -w '%{http_code}' "$CCS_PROBE_URL" 2>/dev/null || true)
+      if [ -n "$code" ] && [ "$code" != "000" ]; then px="http://127.0.0.1:$p"; break; fi
+    done
+    [ -n "$px" ] || echo "ccs-proxy-up: egress probes failed direct AND proxied for $CCS_PROBE_URL; starting direct anyway" >&2
+  fi
+fi
+
 # Detach from the shell so it survives terminal exit (mirrors how the GUI ccs is launched here).
-setsid "$CCS_BIN" proxy serve >"$LOG" 2>&1 < /dev/null &
+if [ -n "$px" ]; then
+  setsid env "HTTPS_PROXY=$px" "HTTP_PROXY=$px" "https_proxy=$px" "http_proxy=$px" \
+    "NO_PROXY=127.0.0.1,localhost,::1" "no_proxy=127.0.0.1,localhost,::1" \
+    "$CCS_BIN" proxy serve >>"$LOG" 2>&1 < /dev/null &
+else
+  setsid env -u HTTPS_PROXY -u HTTP_PROXY -u https_proxy -u http_proxy \
+    "$CCS_BIN" proxy serve >>"$LOG" 2>&1 < /dev/null &
+fi
 disown 2>/dev/null || true
 
 for _ in $(seq 1 60); do

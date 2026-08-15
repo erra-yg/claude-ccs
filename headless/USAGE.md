@@ -92,6 +92,8 @@ claude-ccs opencode --print "hi"   # 额外参数原样传给 claude
 
 代理是 `setsid` 脱离启动的，**关终端不会死**；日志在 `~/.cc-switch-headless/proxy.log`。
 
+**出站策略（2026-08-15 起）**：代理进程**直连优先**——启动时对 profile 的 `base-url` 宿主做**真实 HTTPS 往返探测**（直连两次不通才降级），降级时按 7897/7890/7891/10809/1080 逐个"经代理真实 HTTPS 探测"选活口。**不用 TCP 连通探测**：Clash 节点死但端口活着时 TCP 照样通（2026-08-15 手点 timeout 节点事故即此，代理全转发 502 而上游直连本来通）。不继承 shell 的 `https_proxy`（会击穿直连优先）；强制覆盖：`CCS_OUTBOUND_PROXY=none`（强制直连）或 `=http://…`（强制指定代理）。出站 env 在代理进程一生固定，**会话中途出站死了须重启代理**（`pkill -f 'cc-switch proxy serve'` 后重跑 `claude-ccs <name>`，按新探测拉起）。`headless/ccs-proxy-up.sh` 同款策略（`CCS_PROBE_URL` 默认 `https://opencode.ai/`）。注：2026-08-07 曾记"WSL 直连 HTTPS 黑洞必须走 Clash"——那是 TUN MTU 期的状态；探测降级同时覆盖两种网络形态。
+
 ---
 
 ## 7. 它在工作时做了什么
@@ -157,6 +159,7 @@ CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless \
 | cc 报 `401 Missing API key` | ① profile 里 key 没读到（检查 `auth-token`/`keyfile`）；② 极少数情况是代理协议没命中——确认 profile 的 `base-url` 不带 `/v1` |
 | auto mode 报模型暂不可用 | 两类根因：① 未配/弱 `classifier-model` → 配一个已验证的强模型，重跑 `claude-ccs <name>` 同步 Sonnet 槽；② 已配但仍间歇 → 该模型在供应商上游不稳（如 opencode Go 上 `qwen3.8-max` 间歇 `503`）。查 `proxy_request_logs`：按 `request_model`+`status_code` 聚合看 `claude-sonnet-*` 行失败率（注意 503 行的 `model` 列会回退成 `claude-sonnet-*`、并非实发模型），换一个真实负载下接近 0 失败的模型 |
 | 代理没起来 | 看 `~/.cc-switch-headless/proxy.log`；手动 `CC_SWITCH_HEADLESS=1 CC_SWITCH_CONFIG_DIR=~/.cc-switch-headless cc-switch proxy serve` 看报错 |
+| 全部请求 502 `connection failed` | 代理进程烤死的出站死了（典型：Clash 节点死/手点了 timeout 节点，2026-08-15）。`pkill -f 'cc-switch proxy serve'` 后重跑 `claude-ccs <name>`——启动器直连优先+真实 HTTPS 探测自动选活出站。2026-08-15 之前启动的旧代理进程仍是旧 env |
 | 想换供应商不生效 | `claude-ccs` 每次都重选当前供应商；若手动改过 DB，重跑一次 `claude-ccs <name>` |
 | 端口 15721 被占 | 改 `$CCS_PORT`（在 `claude-ccs.zsh` 里）或停掉占用进程 |
 

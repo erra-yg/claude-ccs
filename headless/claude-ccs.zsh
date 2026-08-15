@@ -138,25 +138,49 @@ claude-ccs() {
     }
 
     # --- ensure the headless proxy is listening on 15721 ---
+    # Egress policy (operator decision 2026-08-15): DIRECT first; fall back to
+    # the local proxy ladder only after repeated direct failures. The proxy bakes
+    # its egress env at process start, and a listening-but-dead Clash (hand-picked
+    # timeout node, 2026-08-15) kills every forward with 502 while the upstream
+    # is fine direct — so every probe below is a REAL HTTPS round trip to the
+    # provider host ($base_url), never a bare TCP connect (TCP connects succeed
+    # even when Clash's selected node is dead). Egress is fixed for the proxy
+    # process lifetime; a mid-session egress death still needs a proxy restart,
+    # which the next claude-ccs call performs with fresh probes.
+    # Override: CCS_OUTBOUND_PROXY=none (force direct) | <url> (force that proxy).
+    # Shell https_proxy is deliberately NOT inherited — it would defeat direct-first.
     if ! ss -tln 2>/dev/null | grep -q ':15721'; then
-        local _px=""
+        local _px="" _probe="${base_url%/}/" _code=""
         if   [[ $CCS_OUTBOUND_PROXY == none ]]; then :
         elif [[ -n $CCS_OUTBOUND_PROXY ]]; then _px=$CCS_OUTBOUND_PROXY
-        elif [[ -n ${https_proxy:-${HTTPS_PROXY:-}} ]]; then _px=${https_proxy:-$HTTPS_PROXY}
         else
-            local _pport
-            for _pport in 7897 7890 7891 10809 1080; do
-                if timeout 0.3 bash -c "</dev/tcp/127.0.0.1/$_pport" 2>/dev/null; then
-                    _px=http://127.0.0.1:$_pport; break
-                fi
+            # direct tried twice ("直连多次不通") before falling back to a proxy
+            local _try
+            for _try in 1 2; do
+                _code=$(curl --noproxy '*' -m 5 -s -o /dev/null -w '%{http_code}' "$_probe" 2>/dev/null)
+                [[ -n $_code && $_code != 000 ]] && break
             done
+            if [[ -z $_code || $_code == 000 ]]; then
+                local _pport
+                for _pport in 7897 7890 7891 10809 1080; do
+                    _code=$(curl -x "http://127.0.0.1:$_pport" -m 6 -s -o /dev/null -w '%{http_code}' "$_probe" 2>/dev/null)
+                    if [[ -n $_code && $_code != 000 ]]; then
+                        _px="http://127.0.0.1:$_pport"; break
+                    fi
+                done
+                [[ -n $_px ]] || print -u2 "claude-ccs: egress probes failed direct AND proxied for $base_url; starting with direct egress anyway"
+            fi
         fi
         if [[ -n $_px ]]; then
             setsid env "HTTPS_PROXY=$_px" "HTTP_PROXY=$_px" "https_proxy=$_px" "http_proxy=$_px" \
                 "NO_PROXY=127.0.0.1,localhost,::1" "no_proxy=127.0.0.1,localhost,::1" \
                 "$CCS_BIN" proxy serve >> "$CCS_HOME/proxy.log" 2>&1 </dev/null & disown
         else
-            setsid "$CCS_BIN" proxy serve >> "$CCS_HOME/proxy.log" 2>&1 </dev/null & disown
+            # strip inherited shell proxy vars — the launching shell exports
+            # https_proxy globally; leaving them in would silently re-pin the
+            # proxy to a possibly-dead Clash and defeat direct-first
+            setsid env -u HTTPS_PROXY -u HTTP_PROXY -u https_proxy -u http_proxy \
+                "$CCS_BIN" proxy serve >> "$CCS_HOME/proxy.log" 2>&1 </dev/null & disown
         fi
         local i
         for ((i = 0; i < 60; i++)); do
@@ -167,6 +191,7 @@ claude-ccs() {
     ss -tln 2>/dev/null | grep -q ':15721' || { print -u2 "claude-ccs: proxy did not come up on 15721 (see $CCS_HOME/proxy.log)"; return 1; }
 
     # --- launch Claude through the proxy ---
+    _ensure_chroma 2>/dev/null   # 核工程 RAG chroma server(Option C);不在则拉起,失败不阻断
     # opus/haiku/default: literal backend ids -> proxy pass-through.
     # sonnet: role id claude-sonnet-5[1m] -> proxy SONNET slot -> $msonnet. CC fires
     # its auto-mode classifier on the Sonnet role, so this also routes the
